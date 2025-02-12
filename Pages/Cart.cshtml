@@ -1,0 +1,194 @@
+﻿ @page
+@model eMarket.Pages.cartModel
+@{
+    ViewData["Title"] = "Cart";
+}
+
+<h1 class="text-center mb-4">Shopping Cart</h1>
+
+<div id="message-alert" class="alert d-none d-flex align-items-center fade show mb-4" role="alert">
+    <svg class="bi flex-shrink-0 me-2" role="img" aria-label="Message">
+        <use id="message-icon" xlink:href=""></use>
+    </svg>
+    <span id="message-text"></span>
+</div>
+
+<div class="container d-flex justify-content-center">
+    <div class="row d-flex align-items-start justify-content-center w-100 gap-4 text-center">
+
+        <!-- Cart Column -->
+        <div id="cart-container" class="card shadow-sm col-8 p-0">
+        </div>
+
+        <!-- Price & Checkout Column -->
+        <div class="card col-3 d-flex flex-column justify-content-between p-4">
+
+            <div>
+                <h6 class="font-semibold">Subtotal: $<span id="subtotal-price">0.00</span></h6>
+                <h6 class="font-semibold">Sales Tax (5%): $<span id="sales-tax">0.00</span></h6>
+                <h4 class="font-semibold">Total: $<span id="total-price">0.00</span></h4>
+            </div>
+
+            <div class="border-top">
+                <button onclick="placeOrder()" class="btn btn-success mt-3 w-100">Place Order</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    function getCart() {
+        let cart = localStorage.getItem("cart");
+        return cart ? JSON.parse(cart) : [];
+    }
+
+    function saveCart(cart) {
+        localStorage.setItem("cart", JSON.stringify(cart));
+    }
+
+    async function fetchProductDetails(productId) {
+        try {
+            const response = await fetch(`/api/products/${productId}`);
+            if (!response.ok) throw new Error("Product not found");
+
+            const result = await response.json();
+            return result.data;
+        } catch (error) {
+            console.error("Error fetching product details:", error);
+            return null;
+        }
+    }
+
+    async function loadCart() {
+        let cart = getCart();
+        let container = document.getElementById("cart-container");
+        container.innerHTML = "";
+
+        let subtotal = 0;
+
+        if (cart.length === 0) {
+            container.innerHTML = `
+                <div class="p-4 text-center">
+                    <h3 class="text-muted">Your cart is empty.</h3>
+                </div>
+            `;
+            document.getElementById("subtotal-price").innerText = "0.00";
+            document.getElementById("sales-tax").innerText = "0.00";
+            document.getElementById("total-price").innerText = "0.00";
+            return;
+        }
+
+        for (let [index, item] of cart.entries()) {
+            let product = await fetchProductDetails(item.productId);
+            if (!product) continue;
+
+            let itemTotal = product.price * item.quantity;
+            subtotal += itemTotal;
+
+            let row = document.createElement("div");
+            row.id = `row-${item.productId}`;
+            row.classList.add("container", "p-4");
+
+            if (index != 0) {
+                row.classList.add("border-top");
+            }
+
+            row.innerHTML = `
+                <div class="row">
+                    <div class="col-sm-3 d-flex flex-column align-items-center">
+                        <a href="/products/${product.id}">
+                            <img class="img-fluid w-100 h-auto rounded" src="/images/${product.id}.png" onerror="this.src='https://dummyimage.com/150/dee2e6/6c757d.jpg'">
+                        </a>
+                    </div>
+                    <div class="col-sm d-flex flex-column align-items-center">
+                        <h3 class="mb-auto"><a href="/products/${product.id}" class="glow">${product.name}</a></h3>
+                        <h6 class="mb-auto">${product.description}</h6>
+                    </div>
+                    <div class="col-sm-3 d-flex flex-column align-items-center">
+                        <h4>$${itemTotal.toFixed(2)}</h4>
+                        <div class="d-flex align-items-center justify-content-center mt-1 my-3">
+                            <button class="btn btn-outline-secondary btn-sm" onclick="changeQuantity('${product.id}', -1)">−</button>
+                            <input type="number" id="quantity-${product.id}" class="form-control text-center product-middle" min="1" value="${item.quantity}" onchange="updateQuantity('${product.id}', this.value)">
+                            <button class="btn btn-outline-secondary btn-sm" onclick="changeQuantity('${product.id}', 1)">+</button>
+                        </div>
+                        <button onclick="removeFromCart('${item.productId}')" class="btn btn-danger btn-sm">Remove</button>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(row);
+        }
+
+        let salesTax = subtotal * 0.05;
+        let total = subtotal + salesTax;
+
+        document.getElementById("subtotal-price").innerText = subtotal.toFixed(2);
+        document.getElementById("sales-tax").innerText = salesTax.toFixed(2);
+        document.getElementById("total-price").innerText = total.toFixed(2);
+    }
+
+    function changeQuantity(productId, amount) {
+        let input = document.getElementById(`quantity-${productId}`);
+        let currentValue = parseInt(input.value) || 1;
+        let newValue = currentValue + amount;
+        if (newValue < 1) newValue = 1;
+        input.value = newValue;
+        updateQuantity(productId, newValue);
+    }
+
+    function updateQuantity(productId, quantity) {
+        let cart = getCart();
+        let index = cart.findIndex(item => item.productId === productId);
+        if (index !== -1) {
+            cart[index].quantity = parseInt(quantity) || 1;
+            saveCart(cart);
+            loadCart();
+        }
+    }
+
+    function removeFromCart(productId) {
+        let cart = getCart();
+        cart = cart.filter(item => item.productId !== productId);
+        saveCart(cart);
+        loadCart();
+    }
+
+    async function placeOrder() {
+        let cart = getCart();
+        if (cart.length === 0) {
+            showMessage("Your cart is empty", "danger");
+            return;
+        }
+
+        let order = {
+            user: "",
+            items: cart,
+            date: new Date().toISOString(),
+            isProcessed: false
+        };
+
+        try {
+            let response = await fetch("/api/orders", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(order)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showMessage(result.message ?? "Order placed successfully.", "success");
+                localStorage.removeItem("cart");
+                loadCart();
+            } else {
+                showMessage(result.error ?? "Failed to place order.", "danger");
+            }
+        } catch (error) {
+            showMessage("Failed to place order: " + error.message, "danger");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadCart);
+</script>

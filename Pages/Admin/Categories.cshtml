@@ -1,0 +1,138 @@
+﻿@page
+@model eMarket.Pages.Admin.CategoriesModel
+@{
+    ViewData["Title"] = "Category Management";
+}
+
+<h1 class="text-center mb-4">Category Management</h1>
+
+<div class="container">
+    <div id="message-alert" class="alert d-none d-flex align-items-center fade show mb-4" role="alert">
+        <svg class="bi flex-shrink-0 me-2" role="img" aria-label="Message">
+            <use id="message-icon" xlink:href=""></use>
+        </svg>
+        <span id="message-text"></span>
+    </div>
+
+    <h3 class="mb-4">Add New Category</h3>
+    <div class="card p-3 mb-5 border">
+        <div class="row">
+            <div class="col">
+                <input type="text" id="newCategoryName" class="form-control" placeholder="Enter Category Name" required />
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-success btn-sm h-100" onclick="addCategory()">Add Category</button>
+            </div>
+        </div>
+    </div>
+
+    <h3 class="mb-4">Existing Categories</h3>
+    <div div id="category-list" class="list-group">
+        <p>Loading categories...</p>
+    </div>
+</div>
+
+<script>
+    async function loadCategories() {
+        try {
+            const response = await fetch("/api/categories");
+            const result = await response.json();
+            const categoryList = document.getElementById("category-list");
+
+            if (!response.ok) {
+                categoryList.innerHTML = `<p class="text-danger">${result.error || "Failed to load categories."}</p>`;
+                return;
+            }
+
+            if (!result.data || result.data.length === 0) {
+                categoryList.innerHTML = "<p>No categories found.</p>";
+                return;
+            }
+
+            categoryList.innerHTML = result.data.map(category => `
+                <div class="list-group-item d-flex align-items-center justify-content-between py-4" id="row-${category.id}">
+                    <div class="row w-100">
+                        <div class="col">
+                            <input class="form-control" type="text" id="name-${category.id}" value="${category.name}" />
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary btn-sm h-100" onclick="updateCategory('${category.id}')">Save</button>
+                            <button class="btn btn-danger btn-sm h-100" onclick="deleteCategory('${category.id}')">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `).join("");
+        } catch (error) {
+            document.getElementById("category-list").innerHTML = `<p class="text-danger">Failed to load categories: ${error.message}</p>`;
+        }
+    }
+
+    async function addCategory() {
+        const name = document.getElementById("newCategoryName").value.trim();
+        if (!name) {
+            showMessage("Category name is required.", "danger");
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/categories", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name })
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                showMessage(result.message || "Category added successfully.", "success");
+                loadCategories();
+                document.getElementById("newCategoryName").value = "";
+            } else {
+                showMessage(result.error || "Failed to add category.", "danger");
+            }
+        } catch (error) {
+            showMessage("Failed to add category: " + error.message, "danger");
+        }
+    }
+
+    async function updateCategory(id) {
+        const name = document.getElementById(`name-${id}`).value.trim();
+
+        try {
+            const response = await fetch(`/api/categories/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name })
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                showMessage(result.message || "Category updated successfully.", "success");
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                showMessage(result.error || "Failed to update category.", "danger");
+            }
+        } catch (error) {
+            showMessage("Failed to update category: " + error.message, "danger");
+        }
+    }
+
+    async function deleteCategory(id) {
+        if (!confirm("Are you sure you want to delete this category?")) return;
+
+        try {
+            const response = await fetch(`/api/categories/${id}`, { method: "DELETE" });
+            const result = await response.json();
+
+            if (response.ok) {
+                document.getElementById(`row-${id}`).remove();
+                showMessage(result.message || "Category deleted successfully!", "success");
+            } else {
+                showMessage(result.error || "Failed to delete category.", "danger");
+            }
+        } catch (error) {
+            showMessage("Fail to delete category: " + error.message, "danger");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadCategories);
+</script>

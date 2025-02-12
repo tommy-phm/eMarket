@@ -1,0 +1,69 @@
+nav img {
+    width: 2rem;
+    height: 2rem;
+}
+
+.eMarket {
+    margin-right: 0.5rem;
+}
+
+.icon:hover {
+    filter: invert(37%) sepia(46%) saturate(661%) hue-rotate(100deg) brightness(103%) contrast(95%);
+}
+
+body {
+    min-height: 100vh;
+    margin: 0;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+}
+
+footer {
+    padding: 1rem;
+}
+
+#message-alert svg{
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+.product-middle {
+    width: 3rem;
+    height: 2rem;
+    border-color: transparent;
+}
+
+.input-bg {
+    width: 4rem;
+    border-color: transparent;
+}
+
+.glow {
+    font-weight: bold;
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.3s ease;
+}
+
+.glow:hover {
+    color: #198754;
+}
+
+.cart-product {
+    margin: 1rem;
+    padding: 1rem;
+}
+
+
+
+

@@ -1,0 +1,61 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] | eMarket</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/eMarket.styles.css" asp-append-version="true" />
+    <link rel="icon" type="image/x-icon" href="~/images/favicon.ico">
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm border-bottom box-shadow mb-5" role="navigation">
+            <div class="container">
+                <img src="~/images/logo.png" class="eMarket" />
+                <a class="navbar-brand" asp-page="/Index">eMarket</a>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item"><a class="nav-link text-dark" asp-page="/Index">Home</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark" asp-page="/Products">Product</a></li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle text-dark" href="#" id="manageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Manage
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="manageDropdown">
+                                <li><a class="dropdown-item" asp-page="/Admin/Categories">Categories</a></li>
+                                <li><a class="dropdown-item" asp-page="/Admin/Products">Products</a></li>
+                                <li><a class="dropdown-item" asp-page="/Admin/Users">Users</a></li>
+                                <li><a class="dropdown-item" asp-page="/Admin/Orders">Orders</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                    <a class="nav-link icon" asp-page="/Profile">
+                        <img width="35" height="35" src="~/images/user.svg"/>
+                    </a>
+                    <a class="nav-link icon" asp-page="/Cart">
+                        <img width="35" height="35" src="~/images/cart.svg"/>
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+    <footer class="border-top text-center text-muted box-shadow mt-5">
+        <small>
+            eMarket | Icons by <span><a href="https://icons8.com">Icons8</a></span> | Images by <span><a href="https://freepik.com">Freepik</a></span>
+        </small>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

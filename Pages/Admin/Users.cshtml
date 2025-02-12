@@ -1,0 +1,162 @@
+﻿@page
+@model eMarket.Pages.Admin.UsersModel
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<h1 class="text-center mb-4">User Management</h1>
+<div class="container">
+    <div id="message-alert" class="alert d-none d-flex align-items-center fade show mb-4" role="alert">
+        <svg class="bi flex-shrink-0 me-2" role="img" aria-label="Message">
+            <use id="message-icon" xlink:href=""></use>
+        </svg>
+        <span id="message-text"></span>
+    </div>
+
+    <h3 class="mb-4">Add New User</h3>
+    <div class="card p-3 mb-5 border">
+        <div class="row">
+            <div class="col">
+                <input type="text" id="newUserName" class="form-control" placeholder="Enter Username" required />
+            </div>
+            <div class="col">
+                <input type="password" id="newUserPassword" class="form-control" placeholder="Enter Password" required />
+            </div>
+            <div class="col">
+                <select id="newUserRole" class="form-select">
+                    <option value="false">Customer</option>
+                    <option value="true">Admin</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-success btn-sm h-100" onclick="addUser()">Add User</button>
+            </div>
+        </div>
+    </div>
+
+    <h3 class="mb-4">Existing Users</h3>
+    <div id="user-list" class="list-group">
+        <p>Loading users...</p>
+    </div>
+</div>
+
+<script>
+    async function loadUsers() {
+        try {
+            const response = await fetch("/api/users");
+            const result = await response.json();
+            const userList = document.getElementById("user-list");
+
+            if (!response.ok) {
+                userList.innerHTML = `<p class="text-danger">${result.error || "Failed to load users."}</p>`;
+                return;
+            }
+
+            if (!result.data || result.data.length === 0) {
+                userList.innerHTML = "<p>No users found.</p>";
+                return;
+            }
+
+            userList.innerHTML = result.data.map(user => `
+                <div class="list-group-item d-flex align-items-center justify-content-between py-4" id="row-${user.id}">
+                    <div class="row w-100">
+                        <div class="col">
+                            <input class="form-control" type="text" id="name-${user.id}" value="${user.username}" />
+                        </div>
+                        <div class="col">
+                            <input class="form-control" type="password" id="password-${user.id}" placeholder="Enter Password" />
+                        </div>
+                        <div class="col">
+                            <select id="role-${user.id}" class="form-select">
+                                <option value="false" ${!user.isAdmin ? "selected" : ""}>Customer</option>
+                                <option value="true" ${user.isAdmin ? "selected" : ""}>Admin</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary btn-sm h-100" onclick="updateUser('${user.id}')">Save</button>
+                            <button class="btn btn-danger btn-sm h-100" onclick="deleteUser('${user.id}')">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `).join("");
+        } catch (error) {
+            document.getElementById("user-list").innerHTML = `<p class="text-danger">Failed to load users: ${error.message}</p>`;
+        }
+    }
+
+    async function addUser() {
+        const username = document.getElementById("newUserName").value.trim();
+        const password = document.getElementById("newUserPassword").value.trim();
+        const isAdmin = document.getElementById("newUserRole").value === "true";
+
+        if (!username || !password) {
+            showMessage("Username and password are required.", "danger");
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/users`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password, isAdmin })
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                showMessage(result.message ?? "User added successfully.", "success");
+                loadUsers();
+                document.getElementById("newUserName").value = "";
+                document.getElementById("newUserPassword").value = "";
+                document.getElementById("newUserRole").value = "false";
+            } else {
+                showMessage(result.error ?? "Failed to add user.", "danger");
+            }
+        } catch (error) {
+            showMessage("Failed to add user: " + error.message, "danger");
+        }
+    }
+
+    async function updateUser(id) {
+        const username = document.getElementById(`name-${id}`).value.trim();
+        const password = document.getElementById(`password-${id}`).value.trim() || null;
+        const isAdmin = document.getElementById(`role-${id}`).value === "true";
+
+        try {
+            const response = await fetch(`/api/users/management/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({id, username, password, isAdmin })
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                showMessage(result.message ?? "User updated successfully.", "success");
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                showMessage(result.error ?? "Failed to update user.", "danger");
+            }
+        } catch (error) {
+            showMessage("Failed to update user: " + error.message, "danger");
+        }
+    }
+
+    async function deleteUser(id) {
+        if (!confirm("Are you sure you want to delete this user?")) return;
+
+        try {
+            const response = await fetch(`/api/users/${id}`, { method: "DELETE" });
+            const result = await response.json();
+
+            if (response.ok) {
+                document.getElementById(`row-${id}`).remove();
+                showMessage(result.message ?? "User deleted successfully!", "success");
+            } else {
+                showMessage(result.error ?? "Failed to delete user.", "danger");
+            }
+        } catch (error) {
+            showMessage("Failed to delete user: " + error.message, "danger");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadUsers);
+</script>

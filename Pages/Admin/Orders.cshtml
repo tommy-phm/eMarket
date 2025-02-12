@@ -1,0 +1,126 @@
+﻿@page
+@model eMarket.Pages.Admin.OrdersModel
+@{
+    ViewData["Title"] = "Order Management";
+}
+
+<h1 class="text-center mb-4">Order Management</h1>
+
+<div class="container">
+    <div id="message-alert" class="alert d-none d-flex align-items-center fade show mb-4" role="alert">
+        <svg class="bi flex-shrink-0 me-2" role="img" aria-label="Message">
+            <use id="message-icon" xlink:href=""></use>
+        </svg>
+        <span id="message-text"></span>
+    </div>
+
+    <h3 class="mb-4">Existing Orders</h3>
+    <div id="order-list" class="list-group">
+        <p>Loading orders...</p>
+    </div>
+</div>
+
+<script>
+    async function loadOrders() {
+        try {
+            const response = await fetch("/api/orders/report");
+            const result = await response.json();
+            const orderList = document.getElementById("order-list");
+
+            if (!response.ok) {
+                orderList.innerHTML = `<p class="text-danger">${result.error || "Failed to load orders."}</p>`;
+                return;
+            }
+
+            if (!result.data || result.data.length === 0) {
+                orderList.innerHTML = "<p>No orders found.</p>";
+                return;
+            }
+
+            orderList.innerHTML = result.data.map(order => `
+                <div class="list-group-item d-flex align-items-center justify-content-between py-4" id="row-${order.id}">
+                    <div class="row w-100">
+                        <div class="col-sm-3">
+                            <span><strong>ID:</strong><a href="/orders/${order.id}" class="glow">${order.id}</a> </span>
+                        </div>
+                        <div class="col">
+                            <span><strong>Date:</strong> ${new Date(order.date).toLocaleDateString()}</span>
+                        </div>
+                        <div class="col">
+                            <span><strong>User:</strong> ${order.userName ?? "Unknown"}</span>
+                        </div>
+                        <div class="col">
+                            <span><strong>Sub Total:</strong> $${order.totalPrice.toFixed(2)}</span>
+                        </div>
+                        <div class="col">
+                            <input type="checkbox" id="isProcessed-${order.id}" ${order.isProcessed ? "checked" : ""} />
+                            <label for="isProcessed-${order.id}">Processed</label>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary btn-sm h-100" onclick="saveOrder('${order.id}')">Save</button>
+                            <button class="btn btn-danger btn-sm h-100" onclick="deleteOrder('${order.id}')">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `).join("");
+        } catch (error) {
+            document.getElementById("order-list").innerHTML = `<p class="text-danger">Failed to load orders: ${error.message}</p>`;
+        }
+    }
+
+    async function saveOrder(orderId) {
+        const isProcessed = document.getElementById(`isProcessed-${orderId}`).checked;
+
+        try {
+            const getResponse = await fetch(`/api/orders/${orderId}`);
+            if (!getResponse.ok) {
+                const errorText = await getResponse.text();
+                throw new Error(`Failed to retrieve order: ${errorText}`);
+            }
+
+            const orderData = await getResponse.json();
+
+            const putResponse = await fetch(`/api/orders/${orderId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user: orderData.data.user,
+                    date: orderData.data.date,
+                    items: orderData.data.items,
+                    isProcessed
+                })
+            });
+
+            const result = await putResponse.json();
+
+            if (putResponse.ok) {
+                loadOrders();
+                showMessage(result.message ?? "Order updated successfully!", "success");
+            } else {
+                showMessage(result.error ?? "Failed to update order.", "danger");
+            }
+        } catch (error) {
+            showMessage("Fail to update order: " + error.message, "danger");
+        }
+    }
+
+    async function deleteOrder(orderId) {
+        if (!confirm("Are you sure you want to delete this order?")) return;
+
+        try {
+            const response = await fetch(`/api/orders/${orderId}`, { method: "DELETE" });
+            const result = await response.json();
+
+            if (response.ok) {
+                document.getElementById(`row-${orderId}`).remove();
+                showMessage(result.message ?? "Order deleted successfully!", "success");
+            } else {
+                showMessage(result.error ?? "Failed to delete order.", "danger");
+            }
+        } catch (error) {
+            showMessage("Failed to delete order: " + error.message, "danger");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadOrders);
+</script>

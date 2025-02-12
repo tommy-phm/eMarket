@@ -1,0 +1,73 @@
+﻿@page
+@model Products
+@{
+    ViewData["Title"] = "Products";
+}
+
+<h1 class="text-center">Products</h1>
+<div id="product-container">
+    <p>Loading products...</p>
+</div>
+
+<script src="~/js/cart.js"></script>
+
+<script>
+    async function loadProducts() {
+        try {
+            const response = await fetch("/api/products/catalog");
+            const result = await response.json();
+            const productContainer = document.getElementById("product-container");
+
+            if (!response.ok) {
+                productContainer.innerHTML = `<p class="text-danger">${result.error ?? "Failed to load products."}</p>`;
+                return;
+            }
+
+            if (!result.catalog || Object.keys(result.catalog).length === 0) {
+                productContainer.innerHTML = "<p>No products available.</p>";
+                return;
+            }
+
+            productContainer.innerHTML = Object.entries(result.catalog)
+                .map(([category, products]) => `
+                    <div class="container py-3">
+                        <h3>${category}</h3>
+                        <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
+                            ${products.map(product => `
+                                <div class="col">
+                                    <div class="card h-100 shadow-sm">
+                                        <a href="/products/${product.id}">
+                                            <img class="card-img-top" src="/images/${product.id}.png" onerror="this.src='https://dummyimage.com/250/dee2e6/6c757d.jpg'">
+                                        </a>
+                                        <div class="card-body text-center d-flex flex-column">
+                                            <h5>
+                                                <a href="/products/${product.id}" class="glow">${product.name}</a>
+                                            </h5>
+                                            <h6>$${product.price.toFixed(2)}</h6>
+                                            <h6 class="flex-grow-1 d-flex align-items-center justify-content-center">
+                                                <p class="mb-0 w-100">${product.description}</p>
+                                            </h6>
+                                            <div class="mt-2">
+                                                <div class="d-flex align-items-center justify-content-center">
+                                                    <button class="btn btn-outline-secondary btn-sm" onclick="changeQuantity('${product.id}', -1)">−</button>
+                                                    <input type="number" id="quantity-${product.id}" class="form-control text-center product-middle" min="1" value="1">
+                                                    <button class="btn btn-outline-secondary btn-sm" onclick="changeQuantity('${product.id}', 1)">+</button>
+                                                </div>
+                                                <button class="btn btn-success mt-2" onclick="addToCart('${product.id}')">Add to Cart</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join("")}
+                        </div>
+                    </div>
+                `).join("");
+
+            loadCart();
+        } catch (error) {
+            document.getElementById("product-container").innerHTML = `<p class="text-danger">Failed to load products: ${error.message}</p>`;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadProducts);
+</script>

@@ -1,0 +1,94 @@
+﻿@page "/Orders/{id}"
+@{
+    ViewData["Title"] = "Order Details";
+}
+
+<h1 class="text-center mb-4">Order Details</h1>
+
+<div class="container d-flex flex-column align-items-center col-8">
+    <div class="card p-4 shadow-sm">
+
+        <div class="border-bottom">
+            <h6><strong>Order ID:</strong> <span id="order-id"></span></h6>
+            <h6><strong>User:</strong> <span id="order-user"></span></h6>
+            <h6><strong>Date:</strong> <span id="order-date"></span></h6>
+            <h6 class="mb-4"><strong>Status:</strong> <span id="order-status"></span></h6>
+        </div>
+
+        <div id="order-details">
+            <p>Loading order...</p>
+        </div>
+
+        <div class="mt-4">
+            <h6><strong>Subtotal:</strong> $<span id="subtotal-price">0.00</span></h6>
+            <h6><strong>Sales Tax (5%):</strong> $<span id="sales-tax">0.00</span></h6>
+            <h4><strong>Total:</strong> $<span id="total-price">0.00</span></h4>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function loadOrderDetails() {
+        const orderId = window.location.pathname.split("/").pop();
+
+        try {
+            const response = await fetch(`/api/orders/report/${orderId}`);
+            const result = await response.json();
+            const orderDetails = document.getElementById("order-details");
+
+            if (!response.ok) {
+                orderDetails.innerHTML = `<p class="text-danger text-center">${result.error || "Failed to load order details."}</p>`;
+                return;
+            }
+
+            const order = result.data;
+            if (!order) {
+                orderDetails.innerHTML = "<p class='text-center'>Order not found.</p>";
+                return;
+            }
+
+            let subtotal = order.totalPrice;
+            let salesTax = subtotal * 0.05;
+            let total = subtotal + salesTax;
+
+            document.getElementById("order-id").innerText = order.id;
+            document.getElementById("order-user").innerText = order.userName ?? "Guest";
+            document.getElementById("order-date").innerText = new Date(order.date).toLocaleString();
+            document.getElementById("order-status").innerText = order.isProcessed ? "Processed" : "Pending";
+            document.getElementById("order-status").classList.add(order.isProcessed ? "text-success" : "text-warning");
+
+            document.getElementById("subtotal-price").innerText = subtotal.toFixed(2);
+            document.getElementById("sales-tax").innerText = salesTax.toFixed(2);
+            document.getElementById("total-price").innerText = total.toFixed(2);
+
+            orderDetails.innerHTML = `
+                <div class="list-group">
+                    ${order.items.map((item, index) => `
+                        <div class="container py-4 border-bottom">
+                            <div class="row">
+                                <div class="col-sm-3 d-flex flex-column align-items-center">
+                                    <a href="/products/${item.productId}">
+                                        <img class="img-fluid w-100 h-auto rounded" src="/images/${item.productId}.png"
+                                            onerror="this.src='https://dummyimage.com/100/dee2e6/6c757d.jpg'">
+                                    </a>
+                                </div>
+                                <div class="col-sm d-flex flex-column align-items-center">
+                                    <h4 class="mb-auto"><a href="/products/${item.productId}" class="glow">${item.productName}</a></h4>
+                                    <h6 class="mb-auto">${item.description ?? "No description available"}</h6>
+                                </div>
+                                <div class="col-sm-3 d-flex flex-column align-items-center">
+                                    <h4>$${(item.price * item.quantity).toFixed(2)}</h4>
+                                    <p class="mb-0">Quantity: ${item.quantity}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `).join("")}
+                </div>
+            `;
+        } catch (error) {
+            document.getElementById("order-details").innerHTML = `<p class="text-danger text-center">Failed to load order: ${error.message}</p>`;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadOrderDetails);
+</script>
